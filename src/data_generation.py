@@ -1,4 +1,5 @@
 import numpy as np
+from matplotlib import pyplot as plt
 
 np.random.seed(0)
 
@@ -23,10 +24,6 @@ def spiral_data(points, classes):
         X[ix] = np.c_[r*np.sin(t*2.5), r*np.cos(t*2.5)]
         y[ix] = class_number
     return X, y
-
-
-# import matplotlib.pyplot as plt
-
 
 # print("here")
 # X, y = create_data(100, 3)
