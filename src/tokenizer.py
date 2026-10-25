@@ -52,7 +52,7 @@ class BPE:
 
     def decode(self, token_ids):
         tokens = b"".join(self.vocab[token_id] for token_id in token_ids)
-        return tokens.decode("utf-8")
+        return tokens.decode("utf-8", errors="replace")
 
 
     def save_vocab_and_merges(self, vocab_path, bpe_merges_path):

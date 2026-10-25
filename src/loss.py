@@ -24,7 +24,7 @@ class CategoricalCrossEntropy(Loss):
             y = np.eye(dvals.shape[-1])[y]
         probs = np.clip(dvals, 1e-7, 1 - 1e-7)
         n = np.prod(dvals.shape[:-1])
-        self.dinputs = -y / probs / n
+        self.dinputs = -(y / probs / n)
 
 class BinaryCrossEntropy(Loss):
     def forward(self, output, y):
@@ -33,7 +33,7 @@ class BinaryCrossEntropy(Loss):
         return np.mean(sample_losses, axis=-1)
     def backward(self, dvals, y):
         probs = np.clip(dvals, 1e-7, 1 - 1e-7)
-        self.dinputs = (-y / probs + (1 - y) / (1 - probs)) / dvals.size
+        self.dinputs = (-(y / probs) + (1 - y) / (1 - probs)) / dvals.size
 
 class MeanSquaredError(Loss):
     def forward(self, output, y):
