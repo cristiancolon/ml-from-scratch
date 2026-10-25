@@ -1,10 +1,12 @@
 import numpy as np
 from activation import Softmax
 
+DTYPE = np.float32
+
 class Linear:
     def __init__(self, n_inputs, n_neurons, weight_l1reg=0, bias_l1reg=0, weight_l2reg=0, bias_l2reg=0, use_bias=True):
-        self.weights = 0.1 * np.random.randn(n_inputs, n_neurons)
-        self.biases = np.zeros((1, n_neurons)) if use_bias else None
+        self.weights = (0.1 * np.random.randn(n_inputs, n_neurons)).astype(DTYPE)
+        self.biases = np.zeros((1, n_neurons), dtype=DTYPE) if use_bias else None
         self.weight_l1reg = weight_l1reg
         self.bias_l1reg = bias_l1reg
         self.weight_l2reg = weight_l2reg
@@ -39,14 +41,14 @@ class Dropout:
         self.dropout_keep = dropout_keep
     def forward(self, X, is_training=True):
         self.inputs = X
-        self.bernoullis = np.random.binomial(1, self.dropout_keep, size=self.inputs.shape)
+        self.bernoullis = np.random.binomial(1, self.dropout_keep, size=self.inputs.shape).astype(X.dtype)
         self.output = self.inputs * self.bernoullis / self.dropout_keep if is_training else self.inputs
     def backward(self, dvals, is_training=True):
         self.dinputs = dvals * self.bernoullis / self.dropout_keep if is_training else dvals
 
 class Embedding:
     def __init__(self, vocab_size, embed_dims, scale):
-        self.weights = np.random.randn(vocab_size, embed_dims) * scale
+        self.weights = (np.random.randn(vocab_size, embed_dims) * scale).astype(DTYPE)
         self.biases = None
         self.weight_l1reg = 0
         self.bias_l1reg = 0
@@ -95,7 +97,7 @@ class SelfAttentionHead:
             self.k_cache, self.v_cache = self.k_prime, self.v
             self.current_pos += X.shape[-2]
 
-        self.s = self.q_prime @ self.k_prime.swapaxes(-1, -2) / np.sqrt(self.qk_dims)
+        self.s = self.q_prime @ self.k_prime.swapaxes(-1, -2) / self.qk_dims ** 0.5
         mask = np.triu(np.ones((X.shape[-2], self.k_prime.shape[-2]), dtype=bool), k=1 + offset)
         s_masked = np.where(mask, -np.inf, self.s)
         self.softmax.forward(s_masked)
@@ -106,7 +108,7 @@ class SelfAttentionHead:
         dv = self.softmax.output.swapaxes(-1, -2) @ dvals
 
         self.softmax.backward(da)
-        ds = self.softmax.dinputs / np.sqrt(self.qk_dims)
+        ds = self.softmax.dinputs / self.qk_dims ** 0.5
 
         dq_prime = ds @ self.k_prime
         self.rope.backward(dq_prime)
@@ -159,7 +161,7 @@ class RotaryPositionalEmbeddings:
     def forward(self, X, offset=0):
         thetas = np.array([self.base ** (-2 * i / self.dims) for i in range(self.dims // 2)])
         positions = np.array([i for i in range(offset, offset + X.shape[-2])])
-        angles = np.outer(positions, thetas)
+        angles = np.outer(positions, thetas).astype(X.dtype)
         X0, X1 = X[..., 0::2], X[..., 1::2]
         self.output = np.empty_like(X)
         outs0, outs1 = X0 * np.cos(angles) - X1 * np.sin(angles), X0 * np.sin(angles) + X1 * np.cos(angles)
@@ -168,7 +170,7 @@ class RotaryPositionalEmbeddings:
     def backward(self, dvals):
         thetas = np.array([self.base ** (-2 * i / self.dims) for i in range(self.dims // 2)])
         positions = np.array([i for i in range(dvals.shape[-2])])
-        angles = np.outer(positions, thetas)
+        angles = np.outer(positions, thetas).astype(dvals.dtype)
         dvals0, dvals1 = dvals[..., 0::2], dvals[..., 1::2]
         self.dinputs = np.empty_like(dvals)
         dinputs0, dinputs1 = dvals0 * np.cos(angles) + dvals1 * np.sin(angles), - dvals0 * np.sin(angles) + dvals1 * np.cos(angles)
@@ -177,8 +179,8 @@ class RotaryPositionalEmbeddings:
 class LayerNorm:
     def __init__(self, n_inputs, epsilon=1e-5):
         self.epsilon = epsilon
-        self.weights = np.ones(n_inputs)
-        self.biases = np.zeros(n_inputs)
+        self.weights = np.ones(n_inputs, dtype=DTYPE)
+        self.biases = np.zeros(n_inputs, dtype=DTYPE)
         self.weight_l1reg = 0
         self.bias_l1reg = 0
         self.weight_l2reg = 0
@@ -201,7 +203,7 @@ class LayerNorm:
 class RMSNorm:
     def __init__(self, n_inputs, epsilon=1e-5):
         self.epsilon = epsilon
-        self.weights = np.ones(n_inputs)
+        self.weights = np.ones(n_inputs, dtype=DTYPE)
         self.biases = None
         self.weight_l1reg = 0
         self.bias_l1reg = 0

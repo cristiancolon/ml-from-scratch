@@ -20,11 +20,13 @@ class CategoricalCrossEntropy(Loss):
         correct = np.take_along_axis(probs, y[..., None], axis=-1).squeeze(-1)
         return -np.log(correct)
     def backward(self, dvals, y):
-        if y.shape != dvals.shape:
-            y = np.eye(dvals.shape[-1])[y]
         probs = np.clip(dvals, 1e-7, 1 - 1e-7)
-        n = np.prod(dvals.shape[:-1])
-        self.dinputs = -(y / probs / n)
+        n = dvals.size // dvals.shape[-1]
+        if y.shape == dvals.shape:
+            self.dinputs = -(y / probs / n)
+        else:
+            self.dinputs = np.zeros_like(probs)
+            np.put_along_axis(self.dinputs, y[..., None], -1 / (np.take_along_axis(probs, y[..., None], axis=-1) * n), axis=-1)
 
 class BinaryCrossEntropy(Loss):
     def forward(self, output, y):
