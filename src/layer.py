@@ -43,8 +43,8 @@ class Dropout:
         self.inputs = X
         self.bernoullis = np.random.binomial(1, self.dropout_keep, size=self.inputs.shape).astype(X.dtype)
         self.output = self.inputs * self.bernoullis / self.dropout_keep if is_training else self.inputs
-    def backward(self, dvals, is_training=True):
-        self.dinputs = dvals * self.bernoullis / self.dropout_keep if is_training else dvals
+    def backward(self, dvals):
+        self.dinputs = dvals * self.bernoullis / self.dropout_keep
 
 class Embedding:
     def __init__(self, vocab_size, embed_dims, scale):
@@ -131,8 +131,8 @@ class SelfAttentionHead:
 
 class MultiHeadAttention:
     def __init__(self, head_count, embed_dims, qk_dims, v_dims):
-        self.heads = [SelfAttentionHead(embed_dims, qk_dims, v_dims) for _ in range(head_count)]
-        self.combination = Linear(head_count * v_dims, embed_dims)
+        self.heads = [SelfAttentionHead(embed_dims, qk_dims // head_count, v_dims // head_count) for _ in range(head_count)]
+        self.combination = Linear(v_dims, embed_dims)
     def forward(self, X, is_training=True):
         self.inputs = X
         for head in self.heads:

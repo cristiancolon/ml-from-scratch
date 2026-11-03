@@ -48,3 +48,19 @@ class MeanAbsoluteError(Loss):
         return np.mean(np.abs(y - output), axis=-1)
     def backward(self, dvals, y):
         self.dinputs = np.sign(dvals - y) / dvals.size
+
+class Softmax_CategoricalCrossEntropy():
+    def __init__(self):
+        self.activation = Softmax()
+        self.loss = CategoricalCrossEntropy()
+    def forward(self, X, y):
+        self.activation.forward(X)
+        self.output =  self.activation.output
+        return self.loss.calculate(self.output, y)
+    def backward(self, dvals, y):
+        n = dvals.size // dvals.shape[-1]
+        if y.shape == dvals.shape:
+            y = np.argmax(y, axis=-1)
+        self.dinputs = dvals.copy()
+        np.put_along_axis(self.dinputs, y[..., None], np.take_along_axis(self.dinputs, y[..., None], axis=-1) - 1, axis=-1)
+        self.dinputs /= n
